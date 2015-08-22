@@ -9,10 +9,11 @@ import os.path
 
 os_encoding = locale.getpreferredencoding()
 file_base = os.path.basename(__file__)
+time_re = re.compile(r"^(\d)+\:(\d)+.(\d)+$")
 
 option_data = {
-    "seoul_parti": {
-        "desc" : u"서울 출전상세정보",
+    "contestant": {
+        "desc" : u"출전상세정보",
         "url": 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfoChulmapyo.do',
         "values" : {
             "rcDate": '{date}',
@@ -23,7 +24,49 @@ option_data = {
         },
         "data_table_no" : 2,
         "split_column_list" : [(6, r"(\d+)\((\d+)\)", 0), (7, r"\((.*)\)(.*)", 1)]
-    }
+    },
+    "record": {
+        "desc" : u"전적",
+        "url": 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfoRecord.do',
+        "values" : {
+            "rcDate": '{date}',
+            "rcNo": '{race_no}',
+            "Sub":"1",
+            "Act":"02",
+            "meet":"1"
+        },
+        "data_table_no" : 2,
+        "split_column_list" : [(2, r"(\d+)\((\d+)\/(\d+)\)", 0), (3, r"(.*)\%", 0), (4, r"(.*)\%", 0)
+            ,(5, r"(\d+)\((\d+)\/(\d+)\)", 0), (6, r"(.*)\%", 0), (7, r"(.*)\%", 0)]
+    },
+    "course_rec": {
+        "desc" : u"해당거리전적",
+        "url": 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfoDistanceRecord.do',
+        "values" : {
+            "rcDate": '{date}',
+            "rcNo": '{race_no}',
+            "Sub":"1",
+            "Act":"02",
+            "meet":"1"
+        },
+        "data_table_no" : 2,
+        "split_column_list" : [(2, r"(\d+)\((\d+)\/(\d+)\)", 0), (3, r"(.*)\%", 0), (4, r"(.*)\%", 0)
+            ,(5, r"(\d+\:\d+.\d+).+", 0), (6, r"(\d+\:\d+.\d+).+", 0), (7, r"(\d+\:\d+.\d+).+", 0)]
+    },
+    # "near10_rec": {
+    #     "desc" : u"최근10회전적",
+    #     "url": 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfo10Score.do',
+    #     "values" : {
+    #         "rcDate": '{date}',
+    #         "rcNo": '{race_no}',
+    #         "Sub":"1",
+    #         "Act":"02",
+    #         "meet":"1"
+    #     },
+    #     "data_table_no" : 2,
+    #     "split_column_list" : [(10, r"(\d+\:\d+.\d+).+", 0), (11, r"(\d+\:\d+.\d+).+", 0), (12, r"(\d+\:\d+.\d+).+", 0),
+    #                            (13, r"(\d+\:\d+.\d+).+", 0), (14, r"(\d+)\((\d+)\)", 0)]
+    # },
 }
 
 def get_table(option, date, race_no, table_no):
@@ -92,8 +135,40 @@ def get_table(option, date, race_no, table_no):
         else:
             filename = u"{}_race{}_{}.txt".format(date, race_no, option)
 
+        tr_rows = []
+        for tr in table.find_all('tr'):
+            ths = tr.select("th")
+            if len(ths) > 0:
+                tr_rows.append(tr)
+        if len(tr_rows) == 2:
+            headers = []
+            tr1 = tr_rows[0].select("th")
+            tr2 = tr_rows[1].select("th")
+            tr2_ptr = 0
+            for th1 in tr1:
+                try:
+                    rowspan = int(th1['rowspan'])
+                except KeyError:
+                    rowspan = 1
 
-        headers = [header.text.encode("utf-8").strip() for header in table.find_all('th')]
+                try:
+                    colspan = int(th1['colspan'])
+                except KeyError:
+                    colspan = 1
+
+                th1_str = th1.text.encode("utf-8").strip()
+                if colspan == 1:
+                    headers.append(th1_str)
+                else:
+                    for i in range(tr2_ptr, tr2_ptr+colspan):
+                        th2 = tr2[i]
+                        th2_str = th2.text.encode("utf-8").strip()
+                        headers.append(th1_str+"_"+th2_str)
+                    tr2_ptr += colspan
+
+        else:
+            headers = [header.text.encode("utf-8").strip() for header in table.find_all('tr th[colspan,rowspan]')]
+
         # 둘로 나눠야 하는 컬럼 추가
         if split_column_list:
             split_column_list.sort(reverse=True)
@@ -113,6 +188,7 @@ def get_table(option, date, race_no, table_no):
             if len(cols) <= 0:
                 continue
             if split_column_list:
+                # 여러 컬럼으로 분라하거나 특수문자 제거
                 for logic in split_column_list:
                     col_no = logic[0]
                     r = re.compile(logic[1])
@@ -133,6 +209,12 @@ def get_table(option, date, race_no, table_no):
                                 col_data.insert(col_no, org_val)
                             else:
                                 col_data.insert(col_no, '')
+
+            # 시간을 변환하여야 하는 것이 있는지 확인
+            for i, val in enumerate(col_data):
+                res = time_re.search(val)
+                if res:
+                    col_data[i] = str(int(res.group(1))*60 + float(res.group(2)+"."+res.group(3)))
 
             rows.append(col_data)
 
@@ -176,6 +258,7 @@ def help(add_val):
 if __name__ == '__main__':
     by_python = 0
 
+    '''
     if len(sys.argv) < 1:
         help(by_python)
     if sys.argv[0] == file_base:
@@ -192,11 +275,10 @@ if __name__ == '__main__':
     else:
         table_no = None
     '''
-    option = "seoul_parti"
+    option = "course_rec"
     date = "20150822"
     race_no = "1"
     table_no = None
-    '''
 
     command_list = option_data.keys()
     if option not in command_list:
