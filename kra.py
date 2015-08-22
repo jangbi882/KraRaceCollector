@@ -10,79 +10,41 @@ import os.path
 os_encoding = locale.getpreferredencoding()
 file_base = os.path.basename(__file__)
 
-def get_table(option, date, race_no, table_no):
-
-    if option == "score":
-        url = 'http://race.kra.co.kr/raceScore/ScoretableDetailList.do'
-        values = {
-            "nextFlag": "false",
-            "meet":"1",
-            "realRcDate": date,
-            "realRcNo": race_no,
-            "Act":"04",
-            "Sub":"1",
-            "pageIndex":"1",
-            "fromDate":"",
-            "toDate":""
-        }
-    elif option == "scm":
-        url = 'http://race.kra.co.kr/raceScore/ScoretableBettingprofitScm.do'
-        values = {
-            "Act":"04",
-            "Sub":"1",
-            "meet":"1",
-            "fromDate":"",
-            "toDate":"",
-            "hrNo":"",
-            "jkNo":"",
-            "trNo":"",
-            "owNo":"",
-            "pageIndex":"1",
-            "realRcDate":date,
-            "realRcNo":race_no
-        }
-    elif option == "both":
-        url = 'http://race.kra.co.kr/raceScore/ScoretableBettingprofitBoth.do'
-        values = {
-            "Act":"04",
-            "Sub":"1",
-            "meet":"1",
-            "realRcDate":date,
-            "realRcNo":race_no
-        }
-    elif option == "bc":
-        url = 'http://race.kra.co.kr/raceScore/ScoretableBettingprofitBc.do'
-        values = {
-            "meet":"1",
-            "realRcDate":date,
-            "realRcNo":race_no,
-            "chulNo1":"",
-            "Act":"04",
-            "Sub":"1"
-        }
-    elif option == "3bc":
-        url = 'http://race.kra.co.kr/raceScore/ScoretableBettingprofit3Bc.do'
-        values = {
-            "Act":"04",
-            "Sub":"1",
-            "meet":"1",
-            "realRcDate":date,
-            "realRcNo":race_no
-        }
-    elif option == "seoul_parti":
-        url = 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfoChulmapyo.do'
-        values = {
-            "rcDate":date,
-            "rcNo":race_no,
+option_data = {
+    "seoul_parti": {
+        "desc" : u"서울 출전상세정보",
+        "url": 'http://race.kra.co.kr/chulmainfo/chulmaDetailInfoChulmapyo.do',
+        "values" : {
+            "rcDate": '{date}',
+            "rcNo": '{race_no}',
             "Sub":"1",
             "Act":"02",
             "meet":"1"
-        }
-        # 데이터가 있는 테이블 번호; 0에서 시작
-        data_table_no = 2
-        # 둘로 나눌 컬럼 리스트; 0에서 시작
-        # (col_no, pattern, def_col)
-        split_column_list = [(6, r"(\d+)\((\d+)\)", 0), (7, r"\((.*)\)(.*)", 1)]
+        },
+        "data_table_no" : 2,
+        "split_column_list" : [(6, r"(\d+)\((\d+)\)", 0), (7, r"\((.*)\)(.*)", 1)]
+    }
+}
+
+def get_table(option, date, race_no, table_no):
+
+    try:
+        info = option_data[option]
+    except KeyError:
+        return None
+
+    url = info["url"]
+    values = info["values"]
+    for key in values.keys():
+        val = values[key]
+        if val == '{date}': values[key] = date
+        elif val == '{race_no}' : values[key] = race_no
+
+    # 데이터가 있는 테이블 번호; 0에서 시작
+    data_table_no = info["data_table_no"]
+    # 둘로 나눌 컬럼 리스트; 0에서 시작
+    # (col_no, pattern, def_col)
+    split_column_list = info["split_column_list"]
 
     headers = {
         "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"
@@ -200,31 +162,20 @@ def get_table(option, date, race_no, table_no):
 
 
 #############
-COMMAND_LIST = [
-    {"seoul_parti": u"서울 출전상세정보"},
-    {"score": u"상세 성적표"},
-    {"scm": u"단연복 배당률"},
-    {"both": u"쌍승식 배당률"},
-    {"bc": u"복연승식 배당률"},
-    {"3bc": u"삼복승식 배당률"},
-]
-
 def help(add_val):
     print "USAGE   :\t{}{} <option> <date> <race_no> [<table_no>]".format("python " if add_val==1 else "", file_base)
-    print "EXAMPLE :\t{}{} score 20150719 1 3".format("python " if add_val==1 else "", file_base)
+    print "EXAMPLE :\t{}{} seoul_parti 20150719 1".format("python " if add_val==1 else "", file_base)
     print "EXAMPLE :\t{}{} scm 20150719 1".format("python " if add_val==1 else "", file_base)
     print
     print "\n== Option List =="
-    for cmd in COMMAND_LIST:
-        for key, value in cmd.iteritems():
-            print "{}\t:\t{}".format(key, value.encode(os_encoding))
+    for cmd in option_data.keys():
+        print u"{}\t:\t{}".format(cmd, option_data[cmd]["desc"])
     exit()
 
 
 if __name__ == '__main__':
     by_python = 0
 
-    '''
     if len(sys.argv) < 1:
         help(by_python)
     if sys.argv[0] == file_base:
@@ -245,8 +196,9 @@ if __name__ == '__main__':
     date = "20150822"
     race_no = "1"
     table_no = None
+    '''
 
-    command_list = [cmd.keys()[0] for cmd in COMMAND_LIST]
+    command_list = option_data.keys()
     if option not in command_list:
         print "Invalid option: {}".format(option)
         help(by_python)
