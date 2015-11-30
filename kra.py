@@ -276,6 +276,9 @@ def get_table(option, date, race_no, table_no, city):
                 # 최근10회전적 예외처리
                 if horse_name:
                     col_data.insert(0, horse_name)
+                
+                # 빈 자료를 NA로 변경
+                col_data = ["NA" if d == "" else d for d in col_data]
 
                 rows.append(col_data)
 
