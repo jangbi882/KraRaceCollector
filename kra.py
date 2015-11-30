@@ -10,7 +10,7 @@ import time
 
 os_encoding = locale.getpreferredencoding()
 file_base = os.path.basename(__file__)
-time_re = re.compile(r"^(\d)+\:(\d)+.(\d)+$")
+time_re = re.compile(r"^(\d+)\:(\d+).(\d+)$")
 
 option_data = {
     "contestant": {
@@ -344,8 +344,8 @@ if __name__ == '__main__':
 
     '''
     city = "busan"
-    option = "near10_rec"
-    date = "20150904"
+    option = "course_rec"
+    date = "20151129"
     race_no = "5"
     table_no = None
     '''
