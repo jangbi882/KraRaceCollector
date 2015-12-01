@@ -24,7 +24,7 @@ option_data = {
             "meet": '{city}'
         },
         "data_table_no" : 2,
-        "split_column_list" : [(6, r"(\d+)\((\d+)\)", 0), (7, r"\((.*)\)(.*)", 1)]
+        "split_column_list" : [(6, r"(\d+)\((\-*\d+\.*\d*)\)", 0), (7, r"\((.*)\)(.*)", 1)]
     },
     "record": {
         "desc" : u"전적",
@@ -65,7 +65,8 @@ option_data = {
             "meet": '{city}'
         },
         "data_table_no" : 2,
-        "split_column_list" : [(14, r"(.+)\((.+)\)", 0)]
+        "split_column_list" : [(14, r"(.+)\((.+)\)", 0)],
+        "skip_column_list" : [15, 16, 17]
     },
 }
 
@@ -94,6 +95,12 @@ def get_table(option, date, race_no, table_no, city):
     # 둘로 나눌 컬럼 리스트; 0에서 시작
     # (col_no, pattern, def_col)
     split_column_list = info["split_column_list"]
+
+    # 무시 컬럼 리스트
+    if "skip_column_list" in info:
+        skip_column_list = info["skip_column_list"]
+    else:
+        skip_column_list = None
 
     # 해더를 잘 적어 주지 않으면 시스템이 비정상 호출로 거부 당한다.
     headers = {
@@ -221,6 +228,13 @@ def get_table(option, date, race_no, table_no, city):
                                 headers.append(th1_str+"_"+th2_str)
                             tr2_ptr += colspan
 
+                # 무시 컬럼 처리
+                if skip_column_list:
+                    skip_column_list.sort(reverse=True)
+                    for col_no in skip_column_list:
+                        if len(headers) > col_no:
+                            del(headers[col_no])
+
                 # 둘로 나눠야 하는 컬럼 추가
                 if split_column_list:
                     split_column_list.sort(reverse=True)
@@ -244,6 +258,13 @@ def get_table(option, date, race_no, table_no, city):
                 col_data =[re.sub(u"\s+", " ", val.text.encode("utf-8").strip().replace("\n", " ")) for val in cols]
                 if len(cols) <= 0:
                     continue
+
+                # 무시 컬럼 데이터 제거
+                if skip_column_list:
+                    for col_no in skip_column_list:
+                        if len(col_data) > col_no:
+                            del(col_data[col_no])
+
                 if split_column_list:
                     # 여러 컬럼으로 분라하거나 특수문자 제거
                     for logic in split_column_list:
@@ -344,7 +365,7 @@ if __name__ == '__main__':
 
     '''
     city = "busan"
-    option = "course_rec"
+    option = "near10_rec"
     date = "20151129"
     race_no = "5"
     table_no = None
