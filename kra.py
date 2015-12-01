@@ -10,6 +10,8 @@ import time
 
 os_encoding = locale.getpreferredencoding()
 file_base = os.path.basename(__file__)
+
+# 시간 파싱에 공통적으로 사용할 정규식.
 time_re = re.compile(r"^(\d+)\:(\d+).(\d+)$")
 
 option_data = {
