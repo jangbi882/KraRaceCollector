@@ -26,7 +26,7 @@ option_data = {
             "meet": '{city}'
         },
         "data_table_no" : 2,
-        "split_column_list" : [(6, r"(\d+)\((\-*\d+\.*\d*)\)", 0), (7, r"\((.*)\)(.*)", 1)]
+        "split_column_list" : [(6, r"(\d+\.*\d*)\((\-*\d+\.*\d*)\)", 0), (7, r"\((.*)\)(.*)", 1)]
     },
     "record": {
         "desc" : u"전적",
